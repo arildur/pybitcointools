@@ -497,7 +497,10 @@ def get_txs_in_block(inp):
 
 def get_block_height(txhash):
     j = json.loads(make_request('https://blockchain.info/rawtx/'+txhash).decode("utf-8"))
-    return j['block_height']
+    if j.has_key('block_height'):
+        return j['block_height']
+    else:
+        return None # Transaction does not exist or has not been mined into a block
 
 # fromAddr, toAddr, 12345, changeAddress
 def get_tx_composite(inputs, outputs, output_value, change_address=None, network=None):
