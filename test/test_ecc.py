@@ -123,7 +123,7 @@ class TestTransactionSignVerify(unittest.TestCase):
 
     def test_all(self):
         alphabet = "1234567890qwertyuiopasdfghjklzxcvbnm"
-        for i in range(10):
+        for _ in range(10):
             msg = ''.join([random.choice(alphabet) for i in range(random.randrange(20, 200))])
             priv = sha256(str(random.randrange(2**256)))
             pub = privtopub(priv)
@@ -172,8 +172,10 @@ class TestTransaction(unittest.TestCase):
         addresses = [pubtoaddr(pub) for pub in pubs]
         mscript = mk_multisig_script(pubs[1:], 2, 3)
         msigaddr = p2sh_scriptaddr(mscript)
-        tx = mktx(['01'*32+':1', '23'*32+':2'], [msigaddr+':20202', addresses[0]+':40404'])
+        tx = mktx(['01'*32+':1', '23'*32+':2'], [msigaddr+':20202', addresses[0]+':40404'], locktime=2222222222)
         tx1 = sign(tx, 1, privs[0])
+
+        self.assertEqual(deserialize(tx)['locktime'], 2222222222, "Locktime incorrect")
 
         sig1 = multisign(tx, 0, mscript, privs[1])
         self.assertTrue(verify_tx_input(tx1, 0, mscript, sig1, pubs[1]), "Verification Error")
@@ -198,6 +200,16 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(p2sh_scriptaddr(script, 0xc4), "2MuABMvWTgpZRd4tAG25KW6YzvcoGVZDZYP")
         self.assertEqual(p2sh_scriptaddr(script, 196), "2MuABMvWTgpZRd4tAG25KW6YzvcoGVZDZYP")
 
+    def test_preparetx(self):
+        hextx = preparetx('12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX', '1HLoD9E4SDFFPDiYfNYnkBLQ85Y51J3Zb1', 13)
+        tx = deserialize(hextx)
+        self.assertEqual(tx['locktime'], 0, "Locktime incorrect")
+        self.assertEqual(tx['outs'][0]['value'], 13, "Value incorrect")
+
+        hextx = preparetx('12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX', '1HLoD9E4SDFFPDiYfNYnkBLQ85Y51J3Zb1', 13, locktime=2222222222)
+        tx = deserialize(hextx)
+        self.assertEqual(tx['locktime'], 2222222222, "Locktime incorrect")
+        self.assertEqual(tx['outs'][0]['value'], 13, "Value incorrect")
 
 class TestDeterministicGenerate(unittest.TestCase):
     @classmethod
@@ -490,6 +502,23 @@ class TestConversions(unittest.TestCase):
                 self.privkey_bin, 256, 16, minlen=len(self.privkey_hex)
             )
         )
+
+
+class TestDerEncoding(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        print('Starting der encoding tests')
+
+    def test_all(self):
+        data = [
+            [0x01, '3006020101020101'],
+            [0xF0, '3008020200f0020200f0'],
+            [2**255 - 1, '304402207fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff02207fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'],
+            [2**255, '304602210080000000000000000000000000000000000000000000000000000000000000000221008000000000000000000000000000000000000000000000000000000000000000']
+        ]
+        for n, sig in data:
+            self.assertEqual(der_encode_sig(0, n, n), sig)
 
 
 if __name__ == '__main__':
