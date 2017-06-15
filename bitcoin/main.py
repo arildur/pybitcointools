@@ -14,7 +14,7 @@ from bitcoin.ripemd import *
 
 # Elliptic curve parameters (secp256k1)
 
-P = 2**256 - 2**32 - 977
+P = 2 ** 256 - 2 ** 32 - 977
 N = 115792089237316195423570985008687907852837564279074904382605163141518161494337
 A = 0
 B = 7
@@ -41,8 +41,8 @@ def inv(a, n):
     lm, hm = 1, 0
     low, high = a % n, n
     while low > 1:
-        r = high//low
-        nm, new = hm-lm*r, high-low*r
+        r = high // low
+        nm, new = hm - lm * r, high - low * r
         lm, low, hm, high = nm, new, lm, low
     return lm % n
 
@@ -67,7 +67,7 @@ def multiaccess(obj, prop):
     return [access(o, prop) for o in obj]
 
 
-def slice(obj, start=0, end=2**200):
+def slice(obj, start=0, end=2 ** 200):
     return obj[int(start):int(end)]
 
 
@@ -96,7 +96,7 @@ def jacobian_double(p):
     ysq = (p[1] ** 2) % P
     S = (4 * p[0] * ysq) % P
     M = (3 * p[0] ** 2 + A * p[2] ** 4) % P
-    nx = (M**2 - 2 * S) % P
+    nx = (M ** 2 - 2 * S) % P
     ny = (M * (S - nx) - 8 * ysq ** 2) % P
     nz = (2 * p[1] * p[2]) % P
     return (nx, ny, nz)
@@ -128,7 +128,7 @@ def jacobian_add(p, q):
 
 def from_jacobian(p):
     z = inv(p[2], P)
-    return ((p[0] * z**2) % P, (p[1] * z**3) % P)
+    return ((p[0] * z ** 2) % P, (p[1] * z ** 3) % P)
 
 
 def jacobian_multiply(a, n):
@@ -139,9 +139,9 @@ def jacobian_multiply(a, n):
     if n < 0 or n >= N:
         return jacobian_multiply(a, n % N)
     if (n % 2) == 0:
-        return jacobian_double(jacobian_multiply(a, n//2))
+        return jacobian_double(jacobian_multiply(a, n // 2))
     if (n % 2) == 1:
-        return jacobian_add(jacobian_double(jacobian_multiply(a, n//2)), a)
+        return jacobian_add(jacobian_double(jacobian_multiply(a, n // 2)), a)
 
 
 def fast_multiply(a, n):
@@ -180,10 +180,10 @@ def encode_pubkey(pub, formt):
     if formt == 'decimal': return pub
     elif formt == 'bin': return b'\x04' + encode(pub[0], 256, 32) + encode(pub[1], 256, 32)
     elif formt == 'bin_compressed':
-        return from_int_to_byte(2+(pub[1] % 2)) + encode(pub[0], 256, 32)
+        return from_int_to_byte(2 + (pub[1] % 2)) + encode(pub[0], 256, 32)
     elif formt == 'hex': return '04' + encode(pub[0], 16, 64) + encode(pub[1], 16, 64)
     elif formt == 'hex_compressed':
-        return '0'+str(2+(pub[1] % 2)) + encode(pub[0], 16, 64)
+        return '0' + str(2 + (pub[1] % 2)) + encode(pub[0], 16, 64)
     elif formt == 'bin_electrum': return encode(pub[0], 256, 32) + encode(pub[1], 256, 32)
     elif formt == 'hex_electrum': return encode(pub[0], 16, 64) + encode(pub[1], 16, 64)
     else: raise Exception("Invalid format!")
@@ -195,8 +195,8 @@ def decode_pubkey(pub, formt=None):
     elif formt == 'bin': return (decode(pub[1:33], 256), decode(pub[33:65], 256))
     elif formt == 'bin_compressed':
         x = decode(pub[1:33], 256)
-        beta = pow(int(x*x*x+A*x+B), int((P+1)//4), int(P))
-        y = (P-beta) if ((beta + from_byte_to_int(pub[0])) % 2) else beta
+        beta = pow(int(x * x * x + A * x + B), int((P + 1) // 4), int(P))
+        y = (P - beta) if ((beta + from_byte_to_int(pub[0])) % 2) else beta
         return (x, y)
     elif formt == 'hex': return (decode(pub[2:66], 16), decode(pub[66:130], 16))
     elif formt == 'hex_compressed':
@@ -224,25 +224,25 @@ def encode_privkey(priv, formt, vbyte=0):
         return encode_privkey(decode_privkey(priv), formt, vbyte)
     if formt == 'decimal': return priv
     elif formt == 'bin': return encode(priv, 256, 32)
-    elif formt == 'bin_compressed': return encode(priv, 256, 32)+b'\x01'
+    elif formt == 'bin_compressed': return encode(priv, 256, 32) + b'\x01'
     elif formt == 'hex': return encode(priv, 16, 64)
-    elif formt == 'hex_compressed': return encode(priv, 16, 64)+'01'
+    elif formt == 'hex_compressed': return encode(priv, 16, 64) + '01'
     elif formt == 'wif':
-        return bin_to_b58check(encode(priv, 256, 32), 128+int(vbyte))
+        return bin_to_b58check(encode(priv, 256, 32), 128 + int(vbyte))
     elif formt == 'wif_compressed':
-        return bin_to_b58check(encode(priv, 256, 32)+b'\x01', 128+int(vbyte))
+        return bin_to_b58check(encode(priv, 256, 32) + b'\x01', 128 + int(vbyte))
     else: raise Exception("Invalid format!")
 
-def decode_privkey(priv,formt=None):
+def decode_privkey(priv, formt=None):
     if not formt: formt = get_privkey_format(priv)
     if formt == 'decimal': return priv
     elif formt == 'bin': return decode(priv, 256)
     elif formt == 'bin_compressed': return decode(priv[:32], 256)
     elif formt == 'hex': return decode(priv, 16)
     elif formt == 'hex_compressed': return decode(priv[:64], 16)
-    elif formt == 'wif': return decode(b58check_to_bin(priv),256)
-    elif formt == 'wif_compressed':
-        return decode(b58check_to_bin(priv)[:32],256)
+    elif formt == 'wif': return decode(b58check_to_bin(priv), 256)
+    elif formt == 'wif_compressed': 
+        return decode(b58check_to_bin(priv)[:32], 256)
     else: raise Exception("WIF does not represent privkey")
 
 def add_pubkeys(p1, p2):
@@ -261,7 +261,7 @@ def multiply(pubkey, privkey):
     f1, f2 = get_pubkey_format(pubkey), get_privkey_format(privkey)
     pubkey, privkey = decode_pubkey(pubkey, f1), decode_privkey(privkey, f2)
     # http://safecurves.cr.yp.to/twist.html
-    if not isinf(pubkey) and (pubkey[0]**3+B-pubkey[1]*pubkey[1]) % P != 0:
+    if not isinf(pubkey) and (pubkey[0] ** 3 + B - pubkey[1] * pubkey[1]) % P != 0:
         raise Exception("Point not on curve")
     return encode_pubkey(fast_multiply(pubkey, privkey), f1)
 
@@ -308,7 +308,7 @@ privtoaddr = privkey_to_address
 def neg_pubkey(pubkey):
     f = get_pubkey_format(pubkey)
     pubkey = decode_pubkey(pubkey, f)
-    return encode_pubkey((pubkey[0], (P-pubkey[1]) % P), f)
+    return encode_pubkey((pubkey[0], (P - pubkey[1]) % P), f)
 
 
 def neg_privkey(privkey):
@@ -394,7 +394,7 @@ def hash_to_int(x):
 def num_to_var_int(x):
     x = int(x)
     if x < 253: return from_int_to_byte(x)
-    elif x < 65536: return from_int_to_byte(253)+encode(x, 256, 2)[::-1]
+    elif x < 65536: return from_int_to_byte(253) + encode(x, 256, 2)[::-1]
     elif x < 4294967296: return from_int_to_byte(254) + encode(x, 256, 4)[::-1]
     else: return from_int_to_byte(255) + encode(x, 256, 8)[::-1]
 
@@ -408,15 +408,15 @@ def electrum_sig_hash(message):
 def random_key():
     # Gotta be secure after that java.SecureRandom fiasco...
     entropy = random_string(32) \
-        + str(random.randrange(2**256)) \
-        + str(int(time.time() * 1000000))
+              + str(random.randrange(2 ** 256)) \
+              + str(int(time.time() * 1000000))
     return sha256(entropy)
 
 
 def random_electrum_seed():
     entropy = os.urandom(32) \
-        + str(random.randrange(2**256)) \
-        + str(int(time.time() * 1000000))
+              + str(random.randrange(2 ** 256)) \
+              + str(int(time.time() * 1000000))
     return sha256(entropy)[:32]
 
 # Encodings
@@ -478,8 +478,8 @@ def is_address(addr):
 
 def encode_sig(v, r, s):
     vb, rb, sb = from_int_to_byte(v), encode(r, 256), encode(s, 256)
-    
-    result = base64.b64encode(vb+b'\x00'*(32-len(rb))+rb+b'\x00'*(32-len(sb))+sb)
+
+    result = base64.b64encode(vb + b'\x00' * (32 - len(rb)) + rb + b'\x00' * (32 - len(sb)) + sb)
     return result if is_python2 else str(result, 'utf-8')
 
 
@@ -495,9 +495,9 @@ def deterministic_generate_k(msghash, priv):
     k = b'\x00' * 32
     priv = encode_privkey(priv, 'bin')
     msghash = encode(hash_to_int(msghash), 256, 32)
-    k = hmac.new(k, v+b'\x00'+priv+msghash, hashlib.sha256).digest()
+    k = hmac.new(k, v + b'\x00' + priv + msghash, hashlib.sha256).digest()
     v = hmac.new(k, v, hashlib.sha256).digest()
-    k = hmac.new(k, v+b'\x01'+priv+msghash, hashlib.sha256).digest()
+    k = hmac.new(k, v + b'\x01' + priv + msghash, hashlib.sha256).digest()
     v = hmac.new(k, v, hashlib.sha256).digest()
     return decode(hmac.new(k, v, hashlib.sha256).digest(), 256)
 
@@ -508,9 +508,9 @@ def ecdsa_raw_sign(msghash, priv):
     k = deterministic_generate_k(msghash, priv)
 
     r, y = fast_multiply(G, k)
-    s = inv(k, N) * (z + r*decode_privkey(priv)) % N
+    s = inv(k, N) * (z + r * decode_privkey(priv)) % N
 
-    v, r, s = 27+((y % 2) ^ (0 if s * 2 < N else 1)), r, s if s * 2 < N else N - s
+    v, r, s = 27 + ((y % 2) ^ (0 if s * 2 < N else 1)), r, s if s * 2 < N else N - s
     if 'compressed' in get_privkey_format(priv):
         v += 4
     return v, r, s
@@ -519,20 +519,22 @@ def ecdsa_raw_sign(msghash, priv):
 def ecdsa_sign(msg, priv):
     v, r, s = ecdsa_raw_sign(electrum_sig_hash(msg), priv)
     sig = encode_sig(v, r, s)
-    assert ecdsa_verify(msg, sig, 
-        privtopub(priv)), "Bad Sig!\t %s\nv = %d\n,r = %d\ns = %d" % (sig, v, r, s)
+    assert ecdsa_verify(msg, sig,
+                        privtopub(priv)), "Bad Sig!\t %s\nv = %d\n,r = %d\ns = %d" % (sig, v, r, s)
     return sig
 
 
 def ecdsa_raw_verify(msghash, vrs, pub):
-    v, r, s = vrs
-    if not (27 <= v <= 34):
+    vr, r, vs, s = vrs
+    if not (27 <= vr <= 34):
+        return False
+    if not (27 <= vs <= 34):
         return False
 
     w = inv(s, N)
     z = hash_to_int(msghash)
 
-    u1, u2 = z*w % N, r*w % N
+    u1, u2 = z * w % N, r * w % N
     x, y = fast_add(fast_multiply(G, u1), fast_multiply(decode_pubkey(pub), u2))
     return bool(r == x and (r % N) and (s % N))
 
@@ -553,15 +555,14 @@ def ecdsa_verify(msg, sig, pub):
 
 def ecdsa_raw_recover(msghash, vrs):
     v, r, s = vrs
-    if not (27 <= v <= 34):
-        raise ValueError("%d must in range 27-31" % v)
+
     x = r
-    xcubedaxb = (x*x*x+A*x+B) % P
-    beta = pow(xcubedaxb, (P+1)//4, P)
+    xcubedaxb = (x * x * x + A * x + B) % P
+    beta = pow(xcubedaxb, (P + 1) // 4, P)
     y = beta if v % 2 ^ beta % 2 else (P - beta)
     # If xcubedaxb is not a quadratic residue, then r cannot be the x coord
     # for a point on the curve, and so the sig is invalid
-    if (xcubedaxb - y*y) % P != 0 or not (r % N) or not (s % N):
+    if (xcubedaxb - y * y) % P != 0 or not (r % N) or not (s % N):
         return False
     z = hash_to_int(msghash)
     Gz = jacobian_multiply((Gx, Gy, 1), (N - z) % N)
@@ -576,6 +577,6 @@ def ecdsa_raw_recover(msghash, vrs):
 
 
 def ecdsa_recover(msg, sig):
-    v,r,s = decode_sig(sig)
-    Q = ecdsa_raw_recover(electrum_sig_hash(msg), (v,r,s))
+    v, r, s = decode_sig(sig)
+    Q = ecdsa_raw_recover(electrum_sig_hash(msg), (v, r, s))
     return encode_pubkey(Q, 'hex_compressed') if v >= 31 else encode_pubkey(Q, 'hex')
